@@ -1,0 +1,58 @@
+---
+- hosts: all
+  tasks:
+    - name: Create directory for nginx configuration file
+      become: yes
+      file: path=/etc/nginx/sites-enabled state=directory
+    - name: nginx configuration file
+      become: yes
+      template:
+        src: templates/default.j2
+        dest: /etc/nginx/sites-enabled/default
+    - name: Install packages
+      apt:
+        name: "{{ item }}"
+        state: present
+        update_cache: yes
+      become: yes
+      with_items:
+        - nginx
+        - composer
+        - php-fpm
+        - php-sqlite3
+        - php-mbstring
+        - php-xml
+        - php-zip
+        - imagemagick
+        - libssl-dev
+        - python-pip
+    - name: Checkout mediawiki
+      git: repo=https://github.com/wikimedia/mediawiki.git
+           dest=/home/ubuntu/wiki/
+           version=REL1_27
+    - name: Checkout Vector skin for MediaWiki
+      git: repo=https://phabricator.wikimedia.org/diffusion/SVEC/Vector
+           dest=/home/ubuntu/wiki/skins/vector
+    - name: Checkout WikiTeam tools for creating xml dumps
+      git: repo=https://github.com/WikiTeam/wikiteam.git
+           dest=/home/ubuntu/wikiteam/
+    - name: Install MediaWiki dependencies using composer
+      command: composer install --no-dev
+      args:
+        chdir: /home/ubuntu/wiki
+    - name: Create and set permissions on directory for MediaWiki database
+      become: yes
+      file: path=/home/ubuntu/wiki/data state=directory owner=www-data group=www-data mode=755
+    - name:
+      template:
+        src: templates/LocalSettings.php.j2
+        dest: /home/ubuntu/wiki/LocalSettings.php
+    - name: Install WikiTeam Downloader requirements
+      command: pip install --upgrade -r requirements.txt
+      args:
+        chdir: /home/ubuntu/wikiteam
+    - name: Download Shroudedpath Wiki
+      command: python /home/ubuntu/wikiteam/dumpgenerator.py --api=https://kiok.eu/shroudedpath/api.php --index=https://kiok.eu/shroudedpath/index.php --xml --images --force --path=/home/ubuntu/wikidump
+    - name: Import xml into wiki
+      command: php /home/ubuntu/wiki/maintenance/importDump.php < /home/ubuntu/wikidump/*.xml
+      become: yes
