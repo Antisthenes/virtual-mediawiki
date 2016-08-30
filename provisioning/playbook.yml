@@ -30,6 +30,9 @@
       git: repo=https://github.com/wikimedia/mediawiki.git
            dest=/home/ubuntu/wiki/
            version=REL1_27
+           force=yes
+           depth=1
+           accept_hostkey=yes
     - name: Checkout Vector skin for MediaWiki
       git: repo=https://phabricator.wikimedia.org/diffusion/SVEC/Vector
            dest=/home/ubuntu/wiki/skins/vector
@@ -54,5 +57,5 @@
     - name: Download Shroudedpath Wiki
       command: python /home/ubuntu/wikiteam/dumpgenerator.py --api=https://kiok.eu/shroudedpath/api.php --index=https://kiok.eu/shroudedpath/index.php --xml --images --force --path=/home/ubuntu/wikidump
     - name: Import xml into wiki
-      command: php /home/ubuntu/wiki/maintenance/importDump.php < /home/ubuntu/wikidump/*.xml
+      command: mv kiokeu_shroudedpath-*-history.xml wiki.xml; php /home/ubuntu/wiki/maintenance/importDump.php < /home/ubuntu/wikidump/wiki.xml
       become: yes
